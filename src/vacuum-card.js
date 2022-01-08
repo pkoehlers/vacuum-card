@@ -100,7 +100,7 @@ class VacuumCard extends LitElement {
     return this.config.compact_view;
   }
 
-  get waterLevel() {
+  get waterLevelEntity() {
     if (!this.hass || !this.config.water_level) {
       return null;
     }
@@ -117,7 +117,11 @@ class VacuumCard extends LitElement {
       );
     }
 
-    return this.hass.states[waterLevel];
+    return waterLevel;
+  }
+
+  get waterLevel() {
+    return this.hass.states[this.waterLevelEntity];
   }
 
   setConfig(config) {
@@ -137,8 +141,18 @@ class VacuumCard extends LitElement {
     return this.config.compact_view || false ? 3 : 8;
   }
 
+  hasWaterLevelChanged(changedProps) {
+    return (
+      changedProps.get('hass').states[this.waterLevelEntity].state !==
+      this.waterLevel.state
+    );
+  }
+
   shouldUpdate(changedProps) {
-    return hasConfigOrEntityChanged(this, changedProps);
+    return (
+      hasConfigOrEntityChanged(this, changedProps) ||
+      this.hasWaterLevelChanged(changedProps)
+    );
   }
 
   updated(changedProps) {
@@ -183,15 +197,15 @@ class VacuumCard extends LitElement {
     );
   }
 
-  handleSpeed(e) {
+  handleSpeed(e, context) {
     const fan_speed = e.target.getAttribute('value');
-    this.callService('set_fan_speed', false, { fan_speed });
+    context.callService('set_fan_speed', false, { fan_speed });
   }
 
-  handleSelect(e) {
+  handleSelect(e, context) {
     const value = e.target.getAttribute('value');
-    this.hass.callService('select', 'select_option', {
-      entity_id: this.waterLevel.entity_id,
+    context.hass.callService('select', 'select_option', {
+      entity_id: context.waterLevel.entity_id,
       option: value,
     });
   }
@@ -357,7 +371,7 @@ class VacuumCard extends LitElement {
         <paper-listbox
           slot="dropdown-content"
           selected=${selected}
-          @click="${(e) => onSelected(e)}"
+          @click="${(e) => onSelected(e, this)}"
         >
           ${objects.map(
             (item) =>
